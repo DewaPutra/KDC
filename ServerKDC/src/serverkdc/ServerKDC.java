@@ -17,29 +17,77 @@ public class ServerKDC {
         iDES d = new iDESImplementation();
         String key="";
         
-        if(user == "c") key = dbKey[0];
-        else if(user == "kdc") key = dbKey[1];
-        else if(user == "fs") key = dbKey[2];
+        if(user.equalsIgnoreCase("c")) key = dbKey[0];
+        else if(user.equalsIgnoreCase("kdc")) key = dbKey[1];
+        else if(user.equalsIgnoreCase("fs")) key = dbKey[2];
         
-        String getUser = d.DESde(clientUser, key);
-        String getPass = d.DESde(clientPass, key);
-        int s = Arrays.asList(username).indexOf(getUser);
+        String dev[]= d.devn(64, clientUser);
+        String getUser="";
+        String k = d.toBit(key);
+        for (int i=0;i<dev.length;i++){
+            String plain = d.DESde(dev[i], k);
+            getUser+=d.convertChiper(plain);
+        }
+        String getPass = d.convertChiper(d.DESde(clientPass, k));
+        int s = Arrays.asList(username).indexOf(getUser.trim());
         int s1 = Arrays.asList(password).indexOf(getPass);
-        if(s>0 && s1>0) {
-            System.out.println(getUser + " auth success!!!");
-            status = "auth success";
+        if(s>-1 && s1>-1) {
+            System.out.println("   "+getUser.trim() + " auth success!!!");
+            status = "Authentication success";
+        } else
+        {
+            status = "You are not member of this network!!!";
         }
         return status;
     }
     
+    public static String[] ticketGen(String fsKey, String kdcKey, String req){
+        iDES d = new iDESImplementation();
+        String enReq="", enkdcKey="", k="";
+        String ticket[]=new String[2];
+        
+        //encrypted request
+        k=d.toBit(kdcKey);
+        String dev[] = d.devn(8, req);
+        for(int i=0;i<dev.length;i++){
+            dev[i]=d.addNULL(d.toBit(dev[i]));
+            String chiper = d.DESen(dev[i], k);
+            enReq+=chiper;       
+        }
+        
+        //encrypted session key
+        k=d.toBit(fsKey);
+        enkdcKey = d.DESen(d.toBit(kdcKey), k);
+        ticket[0] = enkdcKey;
+        ticket[1] = enReq;
+        return ticket;
+    }
+    
     public static void main(String[] args) throws IOException{
+        String iden[] = new String[4];
         ServerSocket listener = new ServerSocket(9090);
         try {
+            System.out.println("Server ready...");
             while (true) {
                 Socket socket = listener.accept();
                 try {
+                    BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                    out.println(new Date().toString());
+                    for(int i=0;i<4;i++){
+                        String auth = input.readLine();
+                        iden[i] = auth;
+                    }
+                    String s = reqAuth(iden[0], iden[1], iden[2]);
+                    if(s.equalsIgnoreCase("Authentication success")){
+                        System.out.println("   Generate & Sending ticket...");
+                        String[] ticket = ticketGen(dbKey[2], dbKey[1], iden[3]);
+                        for(int i=0;i<ticket.length;i++){
+                            out.println(ticket[i]);
+                        }
+                        System.out.println("   Ticket sent!");
+                    }else{
+                        out.println(s);
+                    }
                 } finally {
                     socket.close();
                 }
