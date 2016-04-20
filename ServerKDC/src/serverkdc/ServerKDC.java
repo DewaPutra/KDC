@@ -11,8 +11,9 @@ public class ServerKDC {
     public static String username[] = {"AliceClient1", "ServerKDC", "FileServer"};
     public static String password[] = {"5xw8zp47", "83bjskdo", "p20H88zx"};
     public static String dbKey[] = {"5655676x", "s1e2r3v4", "s3rvf1l3"};
+    private static Object thread;
     
-    public static String reqAuth(String user, String clientUser, String clientPass){
+    public static String reqAuth(String user, String clientUser, String clientPass, String req){
         String status = "";
         iDES d = new iDESImplementation();
         String key="";
@@ -28,12 +29,19 @@ public class ServerKDC {
             String plain = d.DESde(dev[i], k);
             getUser+=d.convertChiper(plain);
         }
+        System.out.println("   Authenticating client: "+getUser);
+        String dev1[]= d.devn(64, req);
+        String k1 = d.toBit(key);
+        for (int i=0;i<dev1.length;i++){
+            String plain = d.DESde(dev1[i], k1);
+            status+=d.convertChiper(plain);
+        }
+        
         String getPass = d.convertChiper(d.DESde(clientPass, k));
         int s = Arrays.asList(username).indexOf(getUser.trim());
         int s1 = Arrays.asList(password).indexOf(getPass);
         if(s>-1 && s1>-1) {
             System.out.println("   "+getUser.trim() + " auth success!!!");
-            status = "Authentication success";
         } else
         {
             status = "You are not member of this network!!!";
@@ -43,7 +51,7 @@ public class ServerKDC {
     
     public static String[] ticketGen(String fsKey, String kdcKey, String req){
         iDES d = new iDESImplementation();
-        String enReq="", enkdcKey="", k="";
+        String deReq="", enReq="", enkdcKey="", k="";
         String ticket[]=new String[2];
         
         //encrypted request
@@ -77,10 +85,11 @@ public class ServerKDC {
                         String auth = input.readLine();
                         iden[i] = auth;
                     }
-                    String s = reqAuth(iden[0], iden[1], iden[2]);
-                    if(s.equalsIgnoreCase("Authentication success")){
+                    
+                    String s = reqAuth(iden[0], iden[1], iden[2], iden[3]);
+                    if(s!=null){
                         System.out.println("   Generate & Sending ticket...");
-                        String[] ticket = ticketGen(dbKey[2], dbKey[1], iden[3]);
+                        String[] ticket = ticketGen(dbKey[2], dbKey[1], s);
                         for(int i=0;i<ticket.length;i++){
                             out.println(ticket[i]);
                         }
