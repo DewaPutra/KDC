@@ -28,8 +28,8 @@ public class Client {
         
     public static void main(String[] args) throws IOException{
         System.out.println("Client ready...");
-        String serverKDC = "localhost";
-        String fileServer = "localhost";
+        String serverKDC = "192.168.43.119";
+        String fileServer = "192.168.43.93";
         ArrayList<String> nIdentity = new ArrayList<String>();
         nIdentity.add(identity[0]);
         nIdentity.add(identity[1]);
